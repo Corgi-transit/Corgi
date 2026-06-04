@@ -122,14 +122,15 @@ export const DriverPortal: React.FC = () => {
 
         if (primaryLocs && primaryLocs.length > 0) {
           const prim = primaryLocs[0];
-          setDestCoords({ lat: prim.latitude || 6.8024, lng: prim.longitude || 3.4975 });
+          const lat = prim.latitude || 6.8024;
+          const lng = prim.longitude || 3.4975;
+          setDestCoords(prev => (prev?.lat === lat && prev?.lng === lng) ? prev : { lat, lng });
         }
 
         if (activeBus.locations) {
-          setOriginCoords({
-            lat: activeBus.locations.latitude || 6.5244,
-            lng: activeBus.locations.longitude || 3.3792
-          });
+          const lat = activeBus.locations.latitude || 6.5244;
+          const lng = activeBus.locations.longitude || 3.3792;
+          setOriginCoords(prev => (prev?.lat === lat && prev?.lng === lng) ? prev : { lat, lng });
         }
 
         const { data: bookingsData, error: bookingsError } = await supabase

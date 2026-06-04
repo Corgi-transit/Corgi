@@ -116,7 +116,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
               [latitude, longitude],
               ...fullRoutePointsRef.current.slice(closestIdx + 1),
             ];
-            polylineRef.current.setLatLngs(remaining);
+            if (remaining.length > 1) polylineRef.current.setLatLngs(remaining);
           }
 
           // Throttle DB writes to every 5 seconds
