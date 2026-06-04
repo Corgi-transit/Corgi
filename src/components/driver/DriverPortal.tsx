@@ -120,12 +120,10 @@ export const DriverPortal: React.FC = () => {
           .eq('type', 'primary')
           .limit(1);
 
-        if (primaryLocs && primaryLocs.length > 0) {
-          const prim = primaryLocs[0];
-          const lat = prim.latitude || 6.8024;
-          const lng = prim.longitude || 3.4975;
-          setDestCoords(prev => (prev?.lat === lat && prev?.lng === lng) ? prev : { lat, lng });
-        }
+        const prim = primaryLocs?.[0];
+        const lat = prim?.latitude || 6.8024;
+        const lng = prim?.longitude || 3.4975;
+        setDestCoords(prev => (prev?.lat === lat && prev?.lng === lng) ? prev : { lat, lng });
 
         if (activeBus.locations) {
           const lat = activeBus.locations.latitude || 6.5244;

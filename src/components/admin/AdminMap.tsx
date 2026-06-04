@@ -123,7 +123,7 @@ export const AdminMap: React.FC = () => {
 
     const color = rideStatus === 'returning' ? '#10b981' : '#3b82f6';
 
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${lng},${lat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
+    const osrmUrl = `/api/route?from=${lng},${lat}&to=${dest.lng},${dest.lat}`;
 
     let cancelled = false;
     fetch(osrmUrl).then(r => r.json()).then(data => {

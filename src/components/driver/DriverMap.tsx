@@ -282,21 +282,21 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         if (!userPanningRef.current) mapInstanceRef.current.setView(driverLatlng, 13);
       };
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       fetch(
-        `https://router.project-osrm.org/route/v1/driving/` +
-        `${driverPos.lng},${driverPos.lat};${endpoint.lng},${endpoint.lat}` +
-        `?overview=full&geometries=geojson`
+        `/api/route?from=${driverPos.lng},${driverPos.lat}&to=${endpoint.lng},${endpoint.lat}`,
+        { signal: controller.signal }
       )
         .then(r => r.json())
         .then(data => {
+          clearTimeout(timeoutId);
           if (cancelled) return;
           if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
             drawPolyline(data.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
-          } else {
-            drawPolyline([driverLatlng, endLatlng]);
           }
         })
-        .catch(() => { if (!cancelled) drawPolyline([driverLatlng, endLatlng]); });
+        .catch(() => clearTimeout(timeoutId));
 
     } else {
       if (!originCoords || !destCoords) return;
@@ -317,21 +317,21 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         if (!userPanningRef.current) mapInstanceRef.current.fitBounds(poly.getBounds(), { padding: [40, 40] });
       };
 
+      const controller2 = new AbortController();
+      const timeoutId2 = setTimeout(() => controller2.abort(), 10000);
       fetch(
-        `https://router.project-osrm.org/route/v1/driving/` +
-        `${originCoords.lng},${originCoords.lat};${destCoords.lng},${destCoords.lat}` +
-        `?overview=full&geometries=geojson`
+        `/api/route?from=${originCoords.lng},${originCoords.lat}&to=${destCoords.lng},${destCoords.lat}`,
+        { signal: controller2.signal }
       )
         .then(r => r.json())
         .then(data => {
+          clearTimeout(timeoutId2);
           if (cancelled) return;
           if (data.code === 'Ok' && data.routes?.[0]?.geometry?.coordinates?.length) {
             drawStatic(data.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
-          } else {
-            drawStatic([latlng1, latlng2]);
           }
         })
-        .catch(() => { if (!cancelled) drawStatic([latlng1, latlng2]); });
+        .catch(() => clearTimeout(timeoutId2));
     }
 
     return () => { cancelled = true; };

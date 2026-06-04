@@ -182,10 +182,7 @@ export const PassengerMap: React.FC<PassengerMapProps> = ({
 
     let cancelled = false;
 
-    const osrmUrl =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${originCoords.lng},${originCoords.lat};${destCoords.lng},${destCoords.lat}` +
-      `?overview=full&geometries=geojson`;
+    const osrmUrl = `/api/route?from=${originCoords.lng},${originCoords.lat}&to=${destCoords.lng},${destCoords.lat}`;
 
     fetch(osrmUrl)
       .then(res => res.json())
