@@ -62,8 +62,10 @@ export const DriverMap: React.FC<DriverMapProps> = ({
   const routeMarkersRef = useRef<L.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const lastSaveTimeRef = useRef<number>(0);
+  const lastDisplayUpdateRef = useRef<number>(0);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
   const initialPosRef = useRef<{ lat: number | null; lng: number | null }>({ lat: initialLat, lng: initialLng });
+  const liveTrackingSetRef = useRef(false);
   // Stores all road geometry points for the current leg so the line can shrink as the driver moves
   const fullRoutePointsRef = useRef<[number, number][]>([]);
 
@@ -74,8 +76,6 @@ export const DriverMap: React.FC<DriverMapProps> = ({
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isLiveTracking, setIsLiveTracking] = useState(false);
 
-  useEffect(() => { coordsRef.current = coords; }, [coords]);
-
   const saveLocationToDb = async (lat: number, lng: number) => {
     try {
       const { error } = await supabase
@@ -84,7 +84,6 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         .eq('id', driverId);
       if (error) throw error;
       onLocationUpdate(lat, lng);
-      setCoords({ lat, lng });
     } catch (err) {
       console.error('Failed to save location to database:', err);
     }
@@ -95,19 +94,32 @@ export const DriverMap: React.FC<DriverMapProps> = ({
     const isActive = rideStatus === 'enroute' || rideStatus === 'returning';
 
     if (isActive && navigator.geolocation) {
+      liveTrackingSetRef.current = false;
       watchIdRef.current = navigator.geolocation.watchPosition(
         async (position) => {
           const { latitude, longitude } = position.coords;
           const latlng: L.LatLngExpression = [latitude, longitude];
 
-          // Move bus marker
-          if (markerRef.current) {
-            markerRef.current.setLatLng(latlng);
+          // Update position ref immediately — no React re-render
+          coordsRef.current = { lat: latitude, lng: longitude };
+
+          // Move bus marker directly via Leaflet — no React re-render
+          if (markerRef.current) markerRef.current.setLatLng(latlng);
+
+          // Only set React state once on first GPS fix, not on every tick
+          if (!liveTrackingSetRef.current) {
+            liveTrackingSetRef.current = true;
+            setLocationStatus('success');
+            setIsLiveTracking(true);
+            setCoords({ lat: latitude, lng: longitude });
           }
 
-          setLocationStatus('success');
-          setCoords({ lat: latitude, lng: longitude });
-          setIsLiveTracking(true);
+          // Throttle display label update to every 3 seconds
+          const now = Date.now();
+          if (now - lastDisplayUpdateRef.current >= 3000) {
+            lastDisplayUpdateRef.current = now;
+            setCoords({ lat: latitude, lng: longitude });
+          }
 
           // Shrink the route line: trim off the portion already driven
           if (fullRoutePointsRef.current.length > 1 && polylineRef.current) {
@@ -120,7 +132,6 @@ export const DriverMap: React.FC<DriverMapProps> = ({
           }
 
           // Throttle DB writes to every 5 seconds
-          const now = Date.now();
           if (now - lastSaveTimeRef.current >= 5000) {
             lastSaveTimeRef.current = now;
             await saveLocationToDb(latitude, longitude);
@@ -129,6 +140,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         (err) => {
           console.warn('watchPosition error:', err.message);
           setIsLiveTracking(false);
+          liveTrackingSetRef.current = false;
         },
         { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
       );
@@ -138,6 +150,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         watchIdRef.current = null;
       }
       setIsLiveTracking(false);
+      liveTrackingSetRef.current = false;
     }
 
     return () => {

@@ -82,6 +82,7 @@ export const AdminMap: React.FC = () => {
   const busMarkersRef = useRef<Map<string, L.Marker>>(new Map());
   const routeLinesRef = useRef<Map<string, L.Polyline>>(new Map());
   const sosMarkersRef = useRef<Map<string, L.Marker>>(new Map());
+  const driverStatusRef = useRef<Map<string, string>>(new Map());
   const [sosAlerts, setSosAlerts] = useState<SOSAlert[]>([]);
   const [activeDrivers, setActiveDrivers] = useState<ActiveDriver[]>([]);
 
@@ -154,7 +155,11 @@ export const AdminMap: React.FC = () => {
       maxZoom: 20, attribution: '&copy; Google Maps',
     }).addTo(map);
 
+    const resizeObserver = new ResizeObserver(() => { map.invalidateSize(); });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
       busMarkersRef.current.clear();
       sosMarkersRef.current.clear();
@@ -215,7 +220,12 @@ export const AdminMap: React.FC = () => {
               .bindPopup(`<strong>${d.bus_number}</strong><br/>${d.full_name}<br/>Status: ${d.ride_status}`);
             busMarkersRef.current.set(d.id, marker);
           }
-          drawRouteLine(d.id, d.latitude, d.longitude, d.ride_status);
+          // Only re-fetch route when ride_status changes, not on every GPS tick
+          const prevStatus = driverStatusRef.current.get(d.id);
+          if (prevStatus !== d.ride_status) {
+            driverStatusRef.current.set(d.id, d.ride_status);
+            drawRouteLine(d.id, d.latitude, d.longitude, d.ride_status);
+          }
         } else {
           const existing = busMarkersRef.current.get(d.id);
           if (existing) { existing.remove(); busMarkersRef.current.delete(d.id); }
@@ -279,7 +289,7 @@ export const AdminMap: React.FC = () => {
 
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
-      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0 }} />
+      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, touchAction: 'none' }} />
 
       {/* SOS banner */}
       {sosAlerts.length > 0 && (

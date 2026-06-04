@@ -105,7 +105,11 @@ export const PassengerMap: React.FC<PassengerMapProps> = ({
       attribution: '&copy; Google Maps',
     }).addTo(map);
 
+    const resizeObserver = new ResizeObserver(() => { map.invalidateSize(); });
+    resizeObserver.observe(container);
+
     return () => {
+      resizeObserver.disconnect();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -329,7 +333,7 @@ export const PassengerMap: React.FC<PassengerMapProps> = ({
     <div className="relative w-full h-full" style={{ minHeight: 0 }}>
       <div
         ref={mapContainerRef}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none' }}
       />
 
       {/* SOS banner — takes priority over live badge */}
