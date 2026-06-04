@@ -409,14 +409,14 @@ export const DriverPortal: React.FC = () => {
           {/* Mobile sidebar overlay */}
           {isSidebarOpen && (
             <div
-              className="md:hidden fixed inset-0 bg-black/20 z-40 transition-opacity"
+              className="md:hidden fixed inset-0 bg-black/20 z-[1200] transition-opacity"
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
 
           {/* Sidebar */}
           <aside className={`
-            fixed md:relative top-0 bottom-0 left-0 z-50 md:z-0
+            fixed md:relative top-0 bottom-0 left-0 z-[1300] md:z-0
             border-r border-[var(--border)] bg-white box-border
             flex flex-col shrink-0 overflow-hidden transition-all duration-300
             ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -594,7 +594,7 @@ export const DriverPortal: React.FC = () => {
 
             {activeSubTab === 'dashboard' ? (
               /* Full-page map */
-              <div className="flex-grow w-full h-full" style={{ minHeight: 0, height: '100%' }}>
+              <div className="flex-grow w-full h-full" style={{ minHeight: 0, height: '100%', isolation: 'isolate' }}>
                 <DriverMap
                   driverId={sessionUser.id}
                   initialLat={driverProfile.latitude}

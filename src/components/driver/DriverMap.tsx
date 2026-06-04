@@ -66,6 +66,9 @@ export const DriverMap: React.FC<DriverMapProps> = ({
   // Stores all road geometry points for the current leg so the line can shrink as the driver moves
   const fullRoutePointsRef = useRef<[number, number][]>([]);
 
+  const userPanningRef = useRef(false);
+  const panResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [locationStatus, setLocationStatus] = useState<'loading' | 'success' | 'denied' | 'unavailable' | 'custom'>('custom');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isLiveTracking, setIsLiveTracking] = useState(false);
@@ -188,6 +191,15 @@ export const DriverMap: React.FC<DriverMapProps> = ({
       maxZoom: 20, attribution: '&copy; Google Maps'
     }).addTo(map);
 
+    map.on('dragstart', () => {
+      userPanningRef.current = true;
+      if (panResetTimerRef.current) clearTimeout(panResetTimerRef.current);
+    });
+    map.on('dragend', () => {
+      if (panResetTimerRef.current) clearTimeout(panResetTimerRef.current);
+      panResetTimerRef.current = setTimeout(() => { userPanningRef.current = false; }, 5000);
+    });
+
     if (driverMarkerIcon) {
       markerRef.current = L.marker(startCenter, { icon: driverMarkerIcon, draggable: false }).addTo(map);
     }
@@ -246,7 +258,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         const poly = L.polyline(points, { color: lineColor, weight: 5, opacity: 0.85 })
           .addTo(mapInstanceRef.current);
         polylineRef.current = poly;
-        mapInstanceRef.current.setView(driverLatlng, 13);
+        if (!userPanningRef.current) mapInstanceRef.current.setView(driverLatlng, 13);
       };
 
       fetch(
@@ -281,7 +293,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
         if (cancelled || !mapInstanceRef.current) return;
         const poly = L.polyline(points, { color: '#3b82f6', weight: 5, opacity: 0.85 }).addTo(mapInstanceRef.current);
         polylineRef.current = poly;
-        mapInstanceRef.current.fitBounds(poly.getBounds(), { padding: [40, 40] });
+        if (!userPanningRef.current) mapInstanceRef.current.fitBounds(poly.getBounds(), { padding: [40, 40] });
       };
 
       fetch(
