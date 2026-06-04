@@ -63,6 +63,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
   const watchIdRef = useRef<number | null>(null);
   const lastSaveTimeRef = useRef<number>(0);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const initialPosRef = useRef<{ lat: number | null; lng: number | null }>({ lat: initialLat, lng: initialLng });
   // Stores all road geometry points for the current leg so the line can shrink as the driver moves
   const fullRoutePointsRef = useRef<[number, number][]>([]);
 
@@ -239,9 +240,10 @@ export const DriverMap: React.FC<DriverMapProps> = ({
     let cancelled = false;
 
     if (isActive) {
+      const fallback = initialPosRef.current;
       const driverPos = coordsRef.current ?? (
-        typeof initialLat === 'number' && typeof initialLng === 'number'
-          ? { lat: initialLat, lng: initialLng } : null
+        typeof fallback.lat === 'number' && typeof fallback.lng === 'number'
+          ? { lat: fallback.lat!, lng: fallback.lng! } : null
       );
       const endpoint = rideStatus === 'enroute' ? originCoords : destCoords;
       if (!driverPos || !endpoint) return;
@@ -320,7 +322,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
     }
 
     return () => { cancelled = true; };
-  }, [originCoords, destCoords, rideStatus, initialLat, initialLng]);
+  }, [originCoords, destCoords, rideStatus]);
 
   return (
     <div className="relative w-full h-full" style={{ minHeight: 0 }}>
