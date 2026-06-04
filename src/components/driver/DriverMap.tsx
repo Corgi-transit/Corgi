@@ -191,6 +191,11 @@ export const DriverMap: React.FC<DriverMapProps> = ({
       maxZoom: 20, attribution: '&copy; Google Maps'
     }).addTo(map);
 
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    resizeObserver.observe(container);
+
     map.on('dragstart', () => {
       userPanningRef.current = true;
       if (panResetTimerRef.current) clearTimeout(panResetTimerRef.current);
@@ -212,6 +217,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
     }
 
     return () => {
+      resizeObserver.disconnect();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -318,7 +324,7 @@ export const DriverMap: React.FC<DriverMapProps> = ({
 
   return (
     <div className="relative w-full h-full" style={{ minHeight: 0 }}>
-      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
+      <div ref={mapContainerRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', touchAction: 'none' }} />
 
       {isLiveTracking && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-full text-xs font-bold shadow-lg pointer-events-none">
