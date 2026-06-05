@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../utils/supabase';
 
 const SOS_TYPES = [
@@ -20,6 +20,23 @@ export const SOSButton: React.FC<SOSButtonProps> = ({ driverId, currentLat, curr
   const [open, setOpen] = useState(false);
   const [activeSOS, setActiveSOS] = useState<{ id: string; type: string } | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from('sos_alerts')
+      .select('id, type')
+      .eq('driver_id', driverId)
+      .eq('active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          const label = SOS_TYPES.find(t => t.id === data.type)?.label || data.type;
+          setActiveSOS({ id: data.id, type: label });
+        }
+      });
+  }, [driverId]);
 
   const handleSend = async (type: typeof SOS_TYPES[number]) => {
     setLoading(true);
