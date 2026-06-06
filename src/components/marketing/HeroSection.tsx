@@ -1,37 +1,59 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { ROUTES } from '@/utils/routes';
 import heroImage from '@/assets/hero.png';
 import productScreenshot from '@/assets/putonhero.png';
+import driverAppScreenshot from '@/assets/driverweb.jpg';
 
-const PcFrameMockup: React.FC<{ src: string; alt: string }> = ({ src, alt }) => (
-  <div className="w-full max-w-[min(100%,680px)] mx-auto sm:max-w-[720px] lg:mx-0 lg:ml-auto lg:max-w-none lg:w-full">
-    {/* Monitor */}
-    <div className="rounded-xl border border-neutral-200/80 bg-gradient-to-b from-neutral-100 to-neutral-200 p-2.5 shadow-[0_28px_70px_-12px_rgba(0,0,0,0.38)] sm:rounded-2xl sm:p-3">
-      {/* Title bar */}
-      <div className="flex items-center gap-2 rounded-t-lg border border-neutral-200/90 bg-neutral-50 px-3 py-2">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" aria-hidden />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" aria-hidden />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" aria-hidden />
-        <span className="ml-2 flex-1 truncate text-center text-[10px] font-medium text-neutral-500">
-          CityBus — Driver Portal
-        </span>
+const PcFrameMockup: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const { left, top, width, height } = el.getBoundingClientRect();
+    const x = ((e.clientX - left) / width - 0.5) * 12;
+    const y = ((e.clientY - top) / height - 0.5) * -12;
+    setTilt({ x, y });
+  };
+
+  const handleMouseLeave = () => setTilt({ x: 0, y: 0 });
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        transform: `perspective(1200px) rotateY(${tilt.x}deg) rotateX(${tilt.y}deg)`,
+        transition: tilt.x === 0 && tilt.y === 0 ? 'transform 0.6s ease' : 'transform 0.1s ease',
+      }}
+      className="w-full max-w-[min(100%,680px)] mx-auto sm:max-w-[720px] lg:mx-0 lg:ml-auto lg:max-w-none lg:w-full cursor-pointer"
+    >
+      {/* Monitor */}
+      <div className="rounded-xl border border-neutral-200/80 bg-gradient-to-b from-neutral-100 to-neutral-200 p-2.5 shadow-[0_28px_70px_-12px_rgba(0,0,0,0.38)] sm:rounded-2xl sm:p-3">
+        {/* Title bar */}
+        <div className="flex items-center gap-2 rounded-t-lg border border-neutral-200/90 bg-neutral-50 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" aria-hidden />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" aria-hidden />
+          <span className="ml-2 flex-1 truncate text-center text-[10px] font-medium text-neutral-500">
+            CityBus — Driver Portal
+          </span>
+        </div>
+        {/* Screen */}
+        <div className="overflow-hidden rounded-b-lg border border-t-0 border-neutral-200/90 bg-neutral-900">
+          <img src={src} alt={alt} className="block w-full h-auto object-cover object-top" />
+        </div>
       </div>
-      {/* Screen */}
-      <div className="overflow-hidden rounded-b-lg border border-t-0 border-neutral-200/90 bg-neutral-900">
-        <img
-          src={src}
-          alt={alt}
-          className="block w-full h-auto object-cover object-top"
-        />
+      {/* Stand */}
+      <div className="mx-auto mt-3 flex flex-col items-center" aria-hidden>
+        <div className="h-3.5 w-28 rounded-sm bg-gradient-to-b from-neutral-300 to-neutral-400 sm:h-4 sm:w-32" />
+        <div className="mt-1 h-2 w-48 rounded-full bg-neutral-300/90 sm:w-52" />
       </div>
     </div>
-    {/* Stand */}
-    <div className="mx-auto mt-3 flex flex-col items-center" aria-hidden>
-      <div className="h-3.5 w-28 rounded-sm bg-gradient-to-b from-neutral-300 to-neutral-400 sm:h-4 sm:w-32" />
-      <div className="mt-1 h-2 w-48 rounded-full bg-neutral-300/90 sm:w-52" />
-    </div>
-  </div>
-);
+  );
+};
 
 const SocialIcons = {
   Twitter: () => (
@@ -92,6 +114,52 @@ const footerLinks = [
 
 const GITHUB_ISSUES_URL = 'https://github.com/Corgi-transit/Corgi/issues';
 const GITHUB_NEW_ISSUE_URL = 'https://github.com/Corgi-transit/Corgi/issues/new';
+
+const PhoneMockup: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el) return;
+    const { left, top, width, height } = el.getBoundingClientRect();
+    const x = ((e.clientX - left) / width - 0.5) * 18;
+    const y = ((e.clientY - top) / height - 0.5) * -18;
+    setTilt({ x, y });
+  };
+
+  const handleMouseLeave = () => setTilt({ x: 0, y: 0 });
+
+  return (
+    <div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        transform: `perspective(900px) rotateY(${tilt.x}deg) rotateX(${tilt.y}deg)`,
+        transition: tilt.x === 0 && tilt.y === 0 ? 'transform 0.6s ease' : 'transform 0.1s ease',
+      }}
+      className="w-full max-w-[260px] mx-auto lg:mx-0 cursor-pointer"
+    >
+      <div className="rounded-[2.5rem] border border-neutral-200/80 bg-gradient-to-b from-neutral-100 to-neutral-200 p-2.5 shadow-[0_28px_70px_-12px_rgba(0,0,0,0.38)]">
+        <div className="flex items-center justify-between rounded-t-[2rem] border border-neutral-200/90 bg-neutral-50 px-4 py-2">
+          <span className="text-[10px] font-medium text-neutral-400">9:41</span>
+          <div className="w-16 h-3 rounded-full bg-neutral-200" />
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-2 rounded-sm bg-neutral-300" />
+            <div className="w-2.5 h-2.5 rounded-full bg-neutral-300" />
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-b-[2rem] border border-t-0 border-neutral-200/90">
+          <img src={src} alt={alt} className="block w-full h-auto object-cover object-top" />
+        </div>
+      </div>
+      <div className="mx-auto mt-3 flex justify-center">
+        <div className="h-1.5 w-24 rounded-full bg-neutral-300" />
+      </div>
+    </div>
+  );
+};
 
 export const HeroSection: React.FC = () => {
   return (
@@ -222,69 +290,10 @@ export const HeroSection: React.FC = () => {
 
             {/* Right — phone mockup */}
             <div className="flex justify-center lg:justify-end">
-              <div className="w-[210px] h-[400px] rounded-[36px] border-[6px] border-neutral-800 bg-neutral-900 shadow-[0_20px_50px_-8px_rgba(0,0,0,0.25)] overflow-hidden relative">
-                {/* Notch */}
-                <div className="absolute top-0 left-0 right-0 h-7 bg-neutral-900 flex items-center justify-center z-10">
-                  <div className="w-16 h-3.5 rounded-full bg-neutral-800" />
-                </div>
-
-                {/* Map */}
-                <div className="absolute inset-0 mt-7 mb-[108px] bg-[#e8edf0] overflow-hidden">
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 210 265" preserveAspectRatio="none">
-                    <line x1="0" y1="55" x2="210" y2="55" stroke="#cdd5de" strokeWidth="1"/>
-                    <line x1="0" y1="120" x2="210" y2="120" stroke="#cdd5de" strokeWidth="1"/>
-                    <line x1="0" y1="185" x2="210" y2="185" stroke="#cdd5de" strokeWidth="1"/>
-                    <line x1="60" y1="0" x2="60" y2="265" stroke="#cdd5de" strokeWidth="1"/>
-                    <line x1="140" y1="0" x2="140" y2="265" stroke="#cdd5de" strokeWidth="1"/>
-                    <path d="M25 230 Q70 160 105 110 Q135 65 185 35" stroke="#6e54ff" strokeWidth="3" fill="none" strokeLinecap="round"/>
-                    <circle cx="105" cy="110" r="11" fill="#6e54ff"/>
-                    <circle cx="105" cy="110" r="6" fill="white"/>
-                    <circle cx="185" cy="35" r="6" fill="#3b82f6"/>
-                    <circle cx="25" cy="230" r="6" fill="#10b981"/>
-                  </svg>
-                  <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-                    <div className="bg-white rounded-full px-2.5 py-1 flex items-center gap-1.5 shadow-sm border border-neutral-100">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <span className="text-[8px] font-bold text-neutral-700">Corgi</span>
-                    </div>
-                    <div className="bg-[#6e54ff] rounded-full px-2.5 py-1">
-                      <span className="text-[8px] font-bold text-white">En Route</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bottom card */}
-                <div className="absolute bottom-0 left-0 right-0 h-[108px] bg-white border-t border-neutral-100 px-3 pt-2.5 pb-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-[#6e54ff]/10 flex items-center justify-center shrink-0">
-                      <span className="text-[9px] font-black text-[#6e54ff]">D</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="m-0 text-[9px] font-bold text-neutral-800">Driver Name</p>
-                      <p className="m-0 text-[8px] text-neutral-400">Mini-bus · Bus 12</p>
-                    </div>
-                    <span className="text-[8px] font-bold text-[#6e54ff] bg-[#6e54ff]/8 px-1.5 py-0.5 rounded-md">14/18</span>
-                  </div>
-                  <div className="flex gap-1.5">
-                    {[['Bus 12', 'neutral'], ['GPS Live', 'green'], ['En Route', 'neutral']].map(([label, c]) => (
-                      <div key={label} className={`flex-1 rounded-lg p-1.5 text-center ${c === 'green' ? 'bg-green-50' : 'bg-neutral-50'}`}>
-                        <p className={`m-0 text-[7px] font-bold ${c === 'green' ? 'text-green-700' : 'text-neutral-700'}`}>{label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-full border border-[var(--border)] bg-neutral-50 h-6 flex items-center px-2 gap-1.5">
-                    <div className="w-4 h-4 rounded-full bg-[#6e54ff] flex items-center justify-center shrink-0">
-                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    </div>
-                    <span className="text-[7px] font-semibold text-neutral-500">Slide to start return journey</span>
-                  </div>
-                </div>
-
-                {/* Home indicator */}
-                <div className="absolute bottom-1 left-0 right-0 flex justify-center">
-                  <div className="w-10 h-0.5 rounded-full bg-neutral-500" />
-                </div>
-              </div>
+              <PhoneMockup
+                src={driverAppScreenshot}
+                alt="Corgi Driver app showing live map and shift controls"
+              />
             </div>
 
           </div>
