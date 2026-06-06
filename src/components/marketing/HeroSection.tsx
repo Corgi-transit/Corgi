@@ -163,6 +163,134 @@ export const HeroSection: React.FC = () => {
         </div>
       </section>
 
+      {/* Driver App Download */}
+      <section className="border-y border-[var(--border)] bg-neutral-50/60">
+        <div className="max-w-[1126px] mx-auto px-6 py-14 sm:py-20">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+            {/* Left — content */}
+            <div className="flex flex-col gap-7 text-center lg:text-left">
+              <div>
+                <p className="m-0 text-[12px] font-semibold text-[#6e54ff] mb-3">
+                  Driver Mobile App
+                </p>
+                <h2 className="m-0 text-[clamp(1.6rem,3.5vw,2.25rem)] font-black leading-tight tracking-tight text-[var(--text-h)]">
+                  Your shift, managed from your phone.
+                </h2>
+                <p className="m-0 mt-4 text-sm leading-relaxed text-[var(--text)] max-w-[440px] mx-auto lg:mx-0">
+                  Corgi Driver is the official Android companion for CityBus drivers. Manage shifts,
+                  track passengers, broadcast your live location, and send SOS alerts — all in one place.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { title: 'Live GPS broadcasting', desc: 'Your position updates every 8 seconds on the fleet map.' },
+                  { title: 'SOS emergency alerts', desc: 'Notify dispatch instantly with the nature of the emergency.' },
+                  { title: 'Shift and route management', desc: 'View your assignment, departure time, and route direction.' },
+                  { title: 'Passenger check-in', desc: 'Mark each passenger as boarded with a single tap.' },
+                  { title: 'Secure email sign-in', desc: 'Sign in with a one-time code sent to your email.' },
+                  { title: 'Deployment history', desc: 'Review your completed trips and past assignments.' },
+                ].map(({ title, desc }) => (
+                  <div key={title} className="rounded-xl border border-[var(--border)] bg-white p-4 text-left shadow-sm">
+                    <p className="m-0 text-[13px] font-semibold text-[var(--text-h)]">{title}</p>
+                    <p className="m-0 mt-1 text-[11px] leading-relaxed text-[var(--text)]">{desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 justify-center lg:justify-start">
+                <a
+                  href="/driver.apk"
+                  download="CorgiDriver.apk"
+                  className="inline-flex items-center gap-2.5 rounded-full bg-[#6e54ff] px-7 py-3.5 text-[14px] font-bold text-white no-underline transition-all hover:-translate-y-0.5 hover:bg-[#5b40e8]"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download APK
+                </a>
+                <span className="text-xs text-[var(--text)]">Android 8.0 or later · Free</span>
+              </div>
+
+              <p className="m-0 text-[11px] text-[var(--text)] max-w-sm mx-auto lg:mx-0">
+                Enable <strong className="text-[var(--text-h)]">Install unknown apps</strong> in your Android settings before installing.
+              </p>
+            </div>
+
+            {/* Right — phone mockup */}
+            <div className="flex justify-center lg:justify-end">
+              <div className="w-[210px] h-[400px] rounded-[36px] border-[6px] border-neutral-800 bg-neutral-900 shadow-[0_20px_50px_-8px_rgba(0,0,0,0.25)] overflow-hidden relative">
+                {/* Notch */}
+                <div className="absolute top-0 left-0 right-0 h-7 bg-neutral-900 flex items-center justify-center z-10">
+                  <div className="w-16 h-3.5 rounded-full bg-neutral-800" />
+                </div>
+
+                {/* Map */}
+                <div className="absolute inset-0 mt-7 mb-[108px] bg-[#e8edf0] overflow-hidden">
+                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 210 265" preserveAspectRatio="none">
+                    <line x1="0" y1="55" x2="210" y2="55" stroke="#cdd5de" strokeWidth="1"/>
+                    <line x1="0" y1="120" x2="210" y2="120" stroke="#cdd5de" strokeWidth="1"/>
+                    <line x1="0" y1="185" x2="210" y2="185" stroke="#cdd5de" strokeWidth="1"/>
+                    <line x1="60" y1="0" x2="60" y2="265" stroke="#cdd5de" strokeWidth="1"/>
+                    <line x1="140" y1="0" x2="140" y2="265" stroke="#cdd5de" strokeWidth="1"/>
+                    <path d="M25 230 Q70 160 105 110 Q135 65 185 35" stroke="#6e54ff" strokeWidth="3" fill="none" strokeLinecap="round"/>
+                    <circle cx="105" cy="110" r="11" fill="#6e54ff"/>
+                    <circle cx="105" cy="110" r="6" fill="white"/>
+                    <circle cx="185" cy="35" r="6" fill="#3b82f6"/>
+                    <circle cx="25" cy="230" r="6" fill="#10b981"/>
+                  </svg>
+                  <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+                    <div className="bg-white rounded-full px-2.5 py-1 flex items-center gap-1.5 shadow-sm border border-neutral-100">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                      <span className="text-[8px] font-bold text-neutral-700">Corgi</span>
+                    </div>
+                    <div className="bg-[#6e54ff] rounded-full px-2.5 py-1">
+                      <span className="text-[8px] font-bold text-white">En Route</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom card */}
+                <div className="absolute bottom-0 left-0 right-0 h-[108px] bg-white border-t border-neutral-100 px-3 pt-2.5 pb-3 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-[#6e54ff]/10 flex items-center justify-center shrink-0">
+                      <span className="text-[9px] font-black text-[#6e54ff]">D</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="m-0 text-[9px] font-bold text-neutral-800">Driver Name</p>
+                      <p className="m-0 text-[8px] text-neutral-400">Mini-bus · Bus 12</p>
+                    </div>
+                    <span className="text-[8px] font-bold text-[#6e54ff] bg-[#6e54ff]/8 px-1.5 py-0.5 rounded-md">14/18</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[['Bus 12', 'neutral'], ['GPS Live', 'green'], ['En Route', 'neutral']].map(([label, c]) => (
+                      <div key={label} className={`flex-1 rounded-lg p-1.5 text-center ${c === 'green' ? 'bg-green-50' : 'bg-neutral-50'}`}>
+                        <p className={`m-0 text-[7px] font-bold ${c === 'green' ? 'text-green-700' : 'text-neutral-700'}`}>{label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rounded-full border border-[var(--border)] bg-neutral-50 h-6 flex items-center px-2 gap-1.5">
+                    <div className="w-4 h-4 rounded-full bg-[#6e54ff] flex items-center justify-center shrink-0">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </div>
+                    <span className="text-[7px] font-semibold text-neutral-500">Slide to start return journey</span>
+                  </div>
+                </div>
+
+                {/* Home indicator */}
+                <div className="absolute bottom-1 left-0 right-0 flex justify-center">
+                  <div className="w-10 h-0.5 rounded-full bg-neutral-500" />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* Feedback */}
       <section className="border-b border-[var(--border)] bg-white">
         <div className="max-w-[1126px] mx-auto px-6 py-12 sm:py-14">
