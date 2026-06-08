@@ -72,7 +72,8 @@ const customMarkerIcon = typeof window !== 'undefined' ? L.divIcon({
 interface Location {
   id: string;
   name: string;
-  type: 'primary' | 'secondary';
+  type: 'primary' | 'secondary' | 'sub-secondary';
+  parent_id?: string | null;
   created_at: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -139,7 +140,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
   const [loadingDrivers, setLoadingDrivers] = useState(false);
   const [newLocName, setNewLocName] = useState('');
   const [customLocName, setCustomLocName] = useState('');
-  const [newLocType, setNewLocType] = useState<'primary' | 'secondary'>('secondary');
+  const [newLocType, setNewLocType] = useState<'primary' | 'secondary' | 'sub-secondary'>('secondary');
+  const [newLocParentId, setNewLocParentId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -609,6 +611,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
     // Fix browser/React state out-of-sync select dropdown bug
     const hasPrimary = locations.some(loc => loc.type === 'primary');
     setNewLocType(hasPrimary ? 'secondary' : 'primary');
+    setNewLocParentId('');
 
     const timer = setTimeout(() => {
       const container = document.getElementById('add-location-map');
@@ -671,6 +674,29 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
       setCustomLocName('');
     }
   }, [newLocName]);
+
+  // When parent state is selected for sub-locations, pan map to that state
+  useEffect(() => {
+    if (!newLocParentId || !mapRef.current) return;
+    const parentLoc = locations.find(l => l.id === newLocParentId);
+    if (!parentLoc) return;
+
+    const coords: [number, number] | undefined =
+      STATE_COORDINATES[parentLoc.name] ??
+      (parentLoc.latitude && parentLoc.longitude
+        ? [parentLoc.latitude, parentLoc.longitude]
+        : undefined);
+
+    if (coords) {
+      mapRef.current.setView(coords, 10);
+      // Clear any previous pinpoint so user can freshly click within this state
+      setPickedCoords(null);
+      if (markerRef.current) {
+        markerRef.current.remove();
+        markerRef.current = null;
+      }
+    }
+  }, [newLocParentId]);
 
   // Synchronize drawer map marker when pickedCoords changes (e.g. from expanded map)
   useEffect(() => {
@@ -743,7 +769,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
   // Add a new approved location (Dashboard)
   const handleAddLocation = async (e: React.FormEvent) => {
     e.preventDefault();
-    const finalName = newLocName === 'custom' ? customLocName.trim() : newLocName.trim();
+    const finalName = newLocType === 'sub-secondary'
+      ? customLocName.trim()
+      : newLocName === 'custom' ? customLocName.trim() : newLocName.trim();
     if (!finalName) return;
 
     setActionLoading(true);
@@ -753,6 +781,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
         {
           name: finalName,
           type: newLocType,
+          parent_id: newLocType === 'sub-secondary' && newLocParentId ? newLocParentId : null,
           latitude: pickedCoords?.lat ?? null,
           longitude: pickedCoords?.lng ?? null
         }
@@ -762,6 +791,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
 
       setNewLocName('');
       setCustomLocName('');
+      setNewLocParentId('');
       setPickedCoords(null);
       setIsAddLocationOpen(false);
       fetchLocations();
@@ -1155,35 +1185,54 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
                         </tr>
                       </thead>
                       <tbody>
-                        {locations.map((loc) => (
-                          <tr key={loc.id} className="border-b border-[var(--border)] last:border-none hover:bg-neutral-50">
-                            <td className="p-3 font-semibold text-[var(--text-h)]">{loc.name}</td>
-                            <td className="p-3">
-                              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${loc.type === 'primary' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {loc.type === 'primary' ? 'Primary' : 'Secondary'}
-                              </span>
-                            </td>
-                            <td className="p-3 font-mono text-[10px] text-neutral-500">
-                              {loc.latitude && loc.longitude
-                                ? `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}`
-                                : '—'
-                              }
-                            </td>
-                            <td className="p-3 text-[var(--text)] font-medium">Authorized</td>
-                            <td className="p-3 text-right">
-                              {loc.type === 'primary' ? (
-                                <span className="text-[11px] text-neutral-400 font-semibold select-none">System Base</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleDeleteLocation(loc.id, loc.name)}
-                                  disabled={actionLoading}
-                                  className="bg-transparent border-none text-red-500 hover:text-red-700 font-semibold cursor-pointer text-xs"
-                                >
-                                  Remove
-                                </button>
-                              )}
-                            </td>
-                          </tr>
+                        {locations.filter(l => l.type !== 'sub-secondary').map((loc) => (
+                          <React.Fragment key={loc.id}>
+                            <tr className="border-b border-[var(--border)] hover:bg-neutral-50">
+                              <td className="p-3 font-semibold text-[var(--text-h)]">{loc.name}</td>
+                              <td className="p-3">
+                                <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${loc.type === 'primary' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                  {loc.type === 'primary' ? 'Primary' : 'Secondary'}
+                                </span>
+                              </td>
+                              <td className="p-3 font-mono text-[10px] text-neutral-500">
+                                {loc.latitude && loc.longitude ? `${loc.latitude.toFixed(4)}, ${loc.longitude.toFixed(4)}` : '—'}
+                              </td>
+                              <td className="p-3 text-[var(--text)] font-medium">Authorized</td>
+                              <td className="p-3 text-right">
+                                {loc.type === 'primary' ? (
+                                  <span className="text-[11px] text-neutral-400 font-semibold select-none">System Base</span>
+                                ) : (
+                                  <button onClick={() => handleDeleteLocation(loc.id, loc.name)} disabled={actionLoading} className="bg-transparent border-none text-red-500 hover:text-red-700 font-semibold cursor-pointer text-xs">
+                                    Remove
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                            {locations.filter(s => s.parent_id === loc.id).map((sub) => (
+                              <tr key={sub.id} className="border-b border-[var(--border)] last:border-none bg-neutral-50/60 hover:bg-neutral-100/60">
+                                <td className="p-3 pl-8">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-neutral-300 text-sm">└</span>
+                                    <span className="font-medium text-[var(--text-h)]">{sub.name}</span>
+                                  </div>
+                                </td>
+                                <td className="p-3">
+                                  <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                                    Sub-location
+                                  </span>
+                                </td>
+                                <td className="p-3 font-mono text-[10px] text-neutral-500">
+                                  {sub.latitude && sub.longitude ? `${sub.latitude.toFixed(4)}, ${sub.longitude.toFixed(4)}` : '—'}
+                                </td>
+                                <td className="p-3 text-[var(--text)] font-medium">Authorized</td>
+                                <td className="p-3 text-right">
+                                  <button onClick={() => handleDeleteLocation(sub.id, sub.name)} disabled={actionLoading} className="bg-transparent border-none text-red-500 hover:text-red-700 font-semibold cursor-pointer text-xs">
+                                    Remove
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </React.Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -1632,42 +1681,58 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
 
             <div className="p-4 sm:p-6 flex-grow overflow-y-auto">
               <form onSubmit={handleAddLocation} className="flex flex-col gap-6">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-h)] mb-1">
-                    State / Location
-                  </label>
-                  <select
-                    value={newLocName}
-                    onChange={(e) => setNewLocName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
-                  >
-                    <option value="">Select a state...</option>
-                    {NIGERIAN_STATES
-                      .filter(state => !locations.some(loc => loc.name === state))
-                      .map(state => (
-                        <option key={state} value={state}>{state}</option>
-                      ))
-                    }
-                    <option value="custom">Custom Location / Terminal...</option>
-                  </select>
+                {newLocType === 'sub-secondary' ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-h)] mb-1">
+                      Sub-location Name
+                    </label>
+                    <input
+                      type="text"
+                      value={customLocName}
+                      onChange={(e) => setCustomLocName(e.target.value)}
+                      required
+                      placeholder="e.g. Port Harcourt Terminal, Rumuola, Bonny Island"
+                      className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-h)] mb-1">
+                      State / Location
+                    </label>
+                    <select
+                      value={newLocName}
+                      onChange={(e) => setNewLocName(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
+                    >
+                      <option value="">Select a state...</option>
+                      {NIGERIAN_STATES
+                        .filter(state => !locations.some(loc => loc.name === state))
+                        .map(state => (
+                          <option key={state} value={state}>{state}</option>
+                        ))
+                      }
+                      <option value="custom">Custom Location / Terminal...</option>
+                    </select>
 
-                  {newLocName === 'custom' && (
-                    <div className="mt-3">
-                      <label className="block text-xs font-semibold text-[var(--text-h)] mb-1">
-                        Custom Location Name
-                      </label>
-                      <input
-                        type="text"
-                        value={customLocName}
-                        onChange={(e) => setCustomLocName(e.target.value)}
-                        required
-                        placeholder="e.g. Redemption City, Berger Terminal"
-                        className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
-                      />
-                    </div>
-                  )}
-                </div>
+                    {newLocName === 'custom' && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-semibold text-[var(--text-h)] mb-1">
+                          Custom Location Name
+                        </label>
+                        <input
+                          type="text"
+                          value={customLocName}
+                          onChange={(e) => setCustomLocName(e.target.value)}
+                          required
+                          placeholder="e.g. Redemption City, Berger Terminal"
+                          className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <div className="flex justify-between items-center mb-1">
@@ -1703,16 +1768,38 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
                   </label>
                   <select
                     value={newLocType}
-                    onChange={(e) => setNewLocType(e.target.value as 'primary' | 'secondary')}
+                    onChange={(e) => {
+                      setNewLocType(e.target.value as 'primary' | 'secondary' | 'sub-secondary');
+                      setNewLocParentId('');
+                    }}
                     className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
                   >
-                    {/* Hide/prevent adding a primary location if one already exists */}
                     {!locations.some(loc => loc.type === 'primary') && (
                       <option value="primary">Primary (Admin / Base Location)</option>
                     )}
-                    <option value="secondary">Secondary (State Pickup Point)</option>
+                    <option value="secondary">Secondary (State)</option>
+                    <option value="sub-secondary">Sub-location (within a State)</option>
                   </select>
                 </div>
+
+                {newLocType === 'sub-secondary' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-h)] mb-1">
+                      Under which State?
+                    </label>
+                    <select
+                      value={newLocParentId}
+                      onChange={(e) => setNewLocParentId(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-white border border-[var(--border)] rounded-md text-xs text-[var(--text-h)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] box-border"
+                    >
+                      <option value="">Select parent state...</option>
+                      {locations.filter(l => l.type === 'secondary').map(l => (
+                        <option key={l.id} value={l.id}>{l.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <Button
                   type="submit"
@@ -1824,10 +1911,12 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({ adminUser, onSignOut
                       >
                         <option value="">Choose a location...</option>
                         {locations
-                          .filter(loc => loc.type === 'secondary' && !assignedBuses[loc.id])
-                          .map(loc => (
-                            <option key={loc.id} value={loc.id}>{loc.name}</option>
-                          ))
+                          .filter(loc => loc.type !== 'primary' && !assignedBuses[loc.id])
+                          .map(loc => {
+                            const parent = loc.parent_id ? locations.find(l => l.id === loc.parent_id) : null;
+                            const label = parent ? `${parent.name} › ${loc.name}` : loc.name;
+                            return <option key={loc.id} value={loc.id}>{label}</option>;
+                          })
                         }
                       </select>
                     </div>
