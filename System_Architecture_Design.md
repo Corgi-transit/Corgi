@@ -2,106 +2,146 @@
 
 ## 1. System Architecture Design
 
-**High-Level Architecture & Layered Design Patterns**
-The CityBus application utilizes a modern **Serverless Monolith** approach, heavily relying on Backend-as-a-Service (BaaS) for its core infrastructure to enable rapid development, scalability, and maintainability.
+**High-Level Architecture**
+CityBus uses a **Serverless BaaS** architecture built on Supabase (PostgreSQL), serving three distinct client surfaces: a React web application for passengers and administrators, and a React Native mobile app for drivers.
 
-*   **Frontend (Client Layer):**
-    *   **Framework:** React 19 built with Vite for optimized development and production builds.
-    *   **Styling:** Tailwind CSS (v4) coupled with Radix UI primitives for accessible, responsive, and consistent UI components.
-    *   **Mapping:** Leaflet for real-time geolocation tracking and route visualization.
-    *   **State Management:** React Context API and local state, integrated directly with Supabase real-time subscriptions.
-*   **Backend & Database Layer:**
-    *   **Platform:** Supabase (Serverless infrastructure based on PostgreSQL).
-    *   **APIs:** PostgREST provides auto-generated, instant RESTful APIs directly from the database schema.
-    *   **Real-time:** Supabase Realtime for broadcasting database changes (e.g., live bus tracking) via WebSockets.
-*   **Hosting & Deployment:**
-    *   **Frontend:** Can be hosted on modern edge networks like Vercel or Netlify.
-    *   **Backend:** Hosted on Supabase cloud.
-*   **Secure Communication:**
-    *   All client-server communication occurs over secure HTTPS.
-    *   Data access is heavily guarded by PostgreSQL **Row Level Security (RLS)** policies. This ensures that users (passengers, drivers, administrators) can only read, insert, or modify data corresponding to their specific role and authorization level.
+**Frontend — Web (Admin & Passenger)**
+- **Framework:** React 19 built with Vite
+- **Styling:** Tailwind CSS v4 with Radix UI primitives
+- **Mapping:** Leaflet with Google Maps tile layer for live fleet tracking and location pinpointing
+- **State:** React local state with Supabase Realtime subscriptions for live driver positions
 
-## 2. Database Schema Specification
+**Frontend — Mobile (Driver App)**
+- **Framework:** Expo SDK 54 with React Native 0.81.5
+- **Navigation:** React Navigation v7 (native stack + bottom tabs)
+- **Maps:** Custom Leaflet-based map component via WebView
+- **Key Libraries:** expo-location (GPS), expo-splash-screen, expo-font ~14.0.12, @react-native-async-storage, @supabase/supabase-js
 
-The data model is built on **PostgreSQL** and focuses on tracking buses (deployments), driver assignments, real-time locations, and passenger analytics.
+**Backend & Database**
+- **Platform:** Supabase — PostgreSQL database, Auth, Realtime, Row Level Security, and Edge Functions
+- **APIs:** PostgREST auto-generated REST endpoints gated by RLS policies
+- **Edge Functions (Deno):** `init-payment`, `verify-payment`, `paystack-webhook` for Paystack credit purchases
+- **RPC Functions:** `deduct_credits`, `list_admins`, `list_pending_admin_invites`, `invite_admin_by_email`, `remove_admin_by_email`, `remove_admin_invite`, `claim_admin_invite`
 
-**Main Entities & Collections:**
+**Hosting & Deployment**
+- **Web:** Vercel (configured via `vercel.json`)
+- **Mobile:** EAS (Expo Application Services) cloud builds — preview APK and production AAB
+- **Backend:** Supabase cloud (project: `ajgjktshqkbajtreeyyr`)
 
-*   **`users` (managed by Supabase Auth):** Handles identity, passwords, and sessions.
-*   **`roles` / `user_roles`:** Maps `auth.users` to specific system roles (`admin`, `driver`, `passenger`).
-*   **`drivers`:** Contains driver-specific metadata, linking back to `auth.users`. Key fields: `id` (UUID, Primary Key), `bus_number` (String), `current_location_lat` (Float), `current_location_lng` (Float).
-*   **`locations`:** Stores bus stops and route waypoints. Key fields: `id` (UUID), `name` (String), `lat` (Float), `lng` (Float), `type` (Enum: stop, waypoint).
-*   **`deployments`:** Tracks the assignment of a driver and a bus to a specific shift or route. Key fields: `id` (UUID), `driver_id` (FK to `drivers`), `start_time` (Timestamp), `end_time` (Timestamp), `status` (Enum: active, completed).
-*   **`passengers`:** Logs passenger events (boarding/alighting) for analytics. Key fields: `id` (UUID), `deployment_id` (FK), `timestamp` (Timestamp), `action` (Enum: board, alight), `location_id` (FK to `locations`).
-*   **`settings`:** Global application configurations managed by administrators.
+**Secure Communication**
+- All communication over HTTPS
+- JWT tokens issued by Supabase Auth passed as `Authorization: Bearer` headers
+- PostgreSQL RLS enforces per-role data isolation — passengers see only their own data, drivers see only their own profile and shifts, admins have full read/write access
+- Credit balance mutations go exclusively through Edge Functions (service role) — the client never writes directly to credit balances
 
-**Data Types & Constraints:**
-*   **Keys:** `UUIDv4` is used for all primary keys to ensure global uniqueness and prevent ID enumeration.
-*   **Relationships:**
-    *   1-to-1 between `auth.users` and `drivers`.
-    *   1-to-Many between `drivers` and `deployments`.
-    *   1-to-Many between `deployments` and `passengers`.
-*   **Integrity:** Relational constraints (Foreign Keys) with `ON DELETE CASCADE` where appropriate, ensuring orphan records are prevented. Transactional consistency is guaranteed by PostgreSQL's ACID compliance.
+---
 
-## 3. API Routing Contracts
+## 2. Database Schema
 
-Because CityBus uses Supabase, traditional custom backend route handlers are replaced by **PostgREST endpoints**. The API is a direct reflection of the database schema, gated by Row Level Security (RLS).
+**`auth.users`** — Managed by Supabase Auth. Identity, sessions, and user metadata (full_name, phone, onboarded flag).
 
-**Authentication Gates:**
-*   **Method:** JWT (JSON Web Tokens) issued by Supabase Auth.
-*   **Flow:** The client obtains a JWT upon login and passes it in the `Authorization: Bearer <token>` header for all API requests. PostgreSQL RLS policies intercept every request to validate permissions before executing the query.
+**`user_roles`** — Maps auth UIDs to roles: `admin`, `driver`, `passenger`. Used by RLS policies for permission checks.
 
-**Crucial REST Endpoints:**
+**`drivers`** — Driver profiles linked to auth.users.
+- `id` UUID (FK to auth.users)
+- `full_name`, `email`, `phone`, `license_number`
+- `bus_number`, `vehicle_type`, `vehicle_capacity`, `vehicle_plate`
+- `status` ENUM: `pending`, `approved`, `rejected`
+- `ride_status` ENUM: `idle`, `enroute`, `returning`, `completed`
+- `latitude`, `longitude` — live GPS coordinates updated by the driver app
+- `active_deployment_id` — FK to current deployment
+- `location_id` — FK to assigned state/location (optional, set on approval)
 
-1.  **Driver Location Update (Live Tracking)**
-    *   **Endpoint:** `PATCH /rest/v1/drivers?id=eq.{driver_id}`
-    *   **Request Method:** `PATCH`
-    *   **Payload:** `{ "current_location_lat": 40.7128, "current_location_lng": -74.0060 }`
-    *   **Auth Gate:** JWT required. RLS ensures only the currently authenticated driver can update their own row.
-    *   **Response:** `204 No Content` (Success) or `401/403` (Unauthorized).
+**`locations`** — Transit nodes at three levels:
+- `type` ENUM: `primary` (Lagos base), `secondary` (state-level pickup points), `sub-secondary` (specific terminals within a state)
+- `parent_id` UUID — FK to parent location (used by sub-secondary to link to its state)
+- `latitude`, `longitude` — pinned coordinates
 
-2.  **Fetch Active Deployments (For Passengers/Admins)**
-    *   **Endpoint:** `GET /rest/v1/deployments?status=eq.active&select=*,drivers(bus_number,current_location_lat,current_location_lng)`
-    *   **Request Method:** `GET`
-    *   **Auth Gate:** JWT required for admins, potentially anonymous/public access with an API Key for read-only passenger apps.
-    *   **Response:** `200 OK`
-        ```json
-        [
-          {
-            "id": "uuid",
-            "start_time": "2026-05-19T08:00:00Z",
-            "drivers": {
-               "bus_number": "Route 42",
-               "current_location_lat": 40.7128,
-               "current_location_lng": -74.0060
-            }
-          }
-        ]
-        ```
+**`deployments`** — Transit events (e.g. RCCG Convention 2026).
+- `name`, `departure_time`, `registration_start`, `registration_end`
 
-3.  **Log Passenger Boarding**
-    *   **Endpoint:** `POST /rest/v1/passengers`
-    *   **Request Method:** `POST`
-    *   **Payload:** `{ "deployment_id": "uuid", "action": "board", "location_id": "uuid" }`
-    *   **Auth Gate:** JWT required (Driver or Admin role).
-    *   **Response:** `201 Created`
+**`deployment_buses`** — Junction table assigning buses to specific locations within a deployment.
+- `deployment_id` FK, `location_id` FK, `bus_number`
 
-## 4. Business Design & Go-To-Market
+**`passenger_bookings`** — Seat reservations by passengers.
+- `deployment_bus_id` FK, `passenger_id` FK
+- `seat_number`, `checked_in` BOOLEAN
 
-**Market Positioning & Target Demographic:**
-CityBus is positioned as a lightweight, highly deployable smart-transit solution designed for **small to medium-sized municipalities, university campuses, and private corporate shuttle fleets**. Unlike heavy, expensive legacy civic systems, CityBus offers a modern, real-time experience out-of-the-box with minimal infrastructure overhead.
+**`passengers`** — Passenger profiles.
+- `full_name`, `email`, `phone`
+- `credits` INTEGER — current credit balance (default 0)
 
-**Initial Target Customers & Distribution Channels:**
-*   **Target:** Local city transit authorities managing fleets of 10-100 buses, universities with campus shuttles.
-*   **Channels:** Direct B2B sales, responding to municipal RFPs (Request for Proposals), and partnerships with local government IT consultants.
+**`credit_transactions`** — Immutable audit log of every credit movement.
+- `type` ENUM: `purchase`, `deduction`, `refund`, `manual`
+- `amount` (positive = added, negative = removed)
+- `naira_paid` — kobo paid to Paystack
+- `paystack_reference` — Paystack transaction ID
 
-**Monetization Strategy:**
-*   **SaaS Tiered Model (B2B):**
-    *   *Base Tier:* Monthly subscription fee per active bus/driver for core tracking and basic analytics.
-    *   *Enterprise Tier:* Advanced predictive routing, robust passenger analytics dashboards, API access for third-party integrations, and white-labeling the passenger app.
-*   **Implementation & Support:** One-time onboarding/setup fees and ongoing SLA-based technical support contracts.
+**`settings`** — Key-value store for global config (e.g. `total_buses`).
 
-**Unique Competitive Advantage:**
-*   **Agility & Speed:** Using a Serverless/BaaS architecture allows CityBus to be deployed in days rather than months.
-*   **Cost-Effective:** Zero hardware servers to maintain; the municipal client only pays for actual usage (bandwidth/database reads), making it highly attractive for budget-constrained local governments.
-*   **Modern UX:** Leveraging React and Leaflet provides an intuitive, smooth interface that legacy civic alternatives simply do not match, improving both driver adoption and administrative oversight.
+**`sos_alerts`** — SOS signals raised by drivers from the app.
+
+**`admin_invites`** — Pending admin invitations by email.
+
+---
+
+## 3. Key Flows
+
+**Driver Onboarding & Approval**
+Driver registers via the mobile app (phone OTP → profile form). Status starts as `pending`. Admin reviews in the Drivers Registry, clicks Approve, and optionally assigns the driver to a state location. Driver app detects the `approved` status and grants access to the main dashboard.
+
+**Deployment & Booking**
+Admin creates a deployment event with departure time and booking window. Buses are assigned to secondary or sub-secondary locations. Passengers browse active deployments, select a location and seat, and spend 1 credit to book. Drivers see their assigned shift in the Shift tab and slide to start the journey. Passengers are checked in via the driver's passenger manifest.
+
+**Live Tracking**
+Driver app publishes GPS coordinates to `drivers.latitude/longitude` on a timed interval while a shift is active. The admin Live Fleet Map and passenger-facing map subscribe to these updates via Supabase Realtime.
+
+**Credit Purchase**
+1. Passenger selects a package (₦2,000–₦20,000) and taps Pay
+2. `init-payment` Edge Function initialises a Paystack transaction
+3. Passenger completes payment on Paystack hosted page
+4. Paystack redirects back with `?reference=xxx&paystack_credits=N`
+5. `verify-payment` Edge Function confirms with Paystack server-to-server
+6. On success, credits are added to `passengers.credits` and logged to `credit_transactions`
+
+**Credit Deduction**
+The `deduct_credits(passenger_id, amount)` RPC runs atomically — checks balance first, deducts only if sufficient, returns false otherwise. Prevents double-spending under concurrent requests.
+
+---
+
+## 4. Transit Node Hierarchy
+
+Locations follow a three-tier structure:
+- **Primary** — The admin base (Lagos). One per system, cannot be deleted.
+- **Secondary** — State-level nodes (Rivers, Oyo, Ondo, etc.). Buses are dispatched from Lagos to these states.
+- **Sub-secondary** — Specific terminals or pickup points within a state (e.g. Port Harcourt Terminal within Rivers). Linked to their parent secondary location via `parent_id`. Deployments can assign buses directly to sub-locations.
+
+---
+
+## 5. Mobile App Build Configuration
+
+- **EAS Project:** `corgi-driver` (ID: `10690062-aeb7-488e-987f-6f9b9819fe8a`)
+- **Bundle ID:** `com.corgi.driver`
+- **Build profiles:**
+  - `development` — dev client APK for internal testing
+  - `preview` — standalone APK for internal distribution
+  - `production` — AAB for Play Store submission
+- **Environment variables** (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY`) are baked into the build via `eas.json` env config and EAS Secrets
+- **New Architecture** (`newArchEnabled: true`) is enabled — requires expo-font pinned to `~14.0.12` to avoid native module version mismatch
+
+---
+
+## 6. Business Design
+
+**Market**
+CityBus is purpose-built for large-scale religious and community transit events in Nigeria — primarily RCCG conventions and similar gatherings where thousands of passengers need coordinated bus transport from multiple states to a central destination.
+
+**Monetisation**
+Passengers pre-purchase credits with Naira via Paystack. 1 credit = ₦1,000. Credits are spent to reserve seats on deployments. The operator (event organiser) controls the fleet, deploys buses, and manages drivers through the admin console.
+
+**Competitive Advantage**
+- Fully serverless — zero infrastructure to maintain, deployable in days
+- Three-surface architecture (admin web, passenger web, driver mobile) from a single Supabase backend
+- Real-time fleet visibility for both admins and passengers
+- Atomic credit system with full audit trail prevents revenue leakage
+- Sub-location support allows fine-grained bus assignments within a state
